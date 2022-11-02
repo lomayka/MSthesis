@@ -51,3 +51,35 @@ def plot_plf_per_quantile(plf_VS: np.array, plf_TEST: np.array, dir_path: str, n
     plt.tight_layout()
     plt.savefig(dir_path + name + '.pdf')
     plt.show()
+    
+def energy_score(s: np.array, y_true: np.array):
+    """
+    Compute the Energy score (ES).
+    :param s: scenarios of shape (24*n_days, n_s)
+    :param y_true: observations of shape = (n_days, 24)
+    :return: the ES per day of the testing set.
+    """
+    n_periods = y_true.shape[1]
+    n_d = len(y_true)  # number of days
+    n_s = s.shape[1]  # number of scenarios per day
+    es = []
+    # loop on all days
+    for d in range(n_d):
+        # select a day for both the scenarios and observations
+        s_d = s[n_periods * d:n_periods * (d + 1), :]
+        y_d = y_true[d, :]
+
+        # compute the part of the ES
+        simple_sum = np.mean([np.linalg.norm(s_d[:, s] - y_d) for s in range(n_s)])
+
+        # compute the second part of the ES
+        double_somme = 0
+        for i in range(n_s):
+            for j in range(n_s):
+                double_somme += np.linalg.norm(s_d[:, i] - s_d[:, j])
+        double_sum = double_somme / (2 * n_s * n_s)
+
+        # ES per day
+        es_d = simple_sum - double_sum
+        es.append(es_d)
+    return es
