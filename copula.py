@@ -39,7 +39,6 @@ def update_cov_matrix(
 
     # Eq. 5 - probit (inverse of Gaussian CDF)
     X = scp.stats.norm.ppf(Y)
-    print(X)
     # Eq. 9 - Update covariance matrix
     cov_matrix = forget_factor * cov_matrix + (1 - forget_factor) * np.outer(X, X)
 
