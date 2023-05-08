@@ -51,7 +51,35 @@ def plot_plf_per_quantile(plf_VS: np.array, plf_TEST: np.array, dir_path: str, n
     plt.tight_layout()
     plt.savefig(dir_path + name + '.pdf')
     plt.show()
-    
+
+def res_model(s_model: dict, n_s: int, i: int, prices: dict, s_obs: dict, curtail:bool=True,  soc_max:float=0):
+    """
+    Compute the planning and dispatching for a given set of senarios.
+    :param s_model: PV, wind, and load scenarios from a model, s_model['pv'] is of shape (#TEST, 24, 100)
+    :param n_s: number of scenarios to select for optimization <= 100.
+    :param i: day index.
+    :param prices:
+    :param s_obs: PV, wind, and load observations for the corresponding day.
+    :return: dispatching solution into a list in keuros
+    """
+    n_s = min(100, n_s)
+    scenarios = dict()
+    scenarios['PV'] = s_model['pv'][i,:,:n_s].transpose() # shape = (n_s, 24) for the day i
+    scenarios['W'] = s_model['wind'][i,:,:n_s].transpose() # shape = (n_s, 24) for the day i
+    scenarios['L'] = s_model['load'][i,:,:n_s].transpose() # shape = (n_s, 24) for the day i
+
+    # planner = Planner_dad(scenarios=scenarios, prices=prices, curtail=curtail)
+    planner = Planner(scenarios=scenarios, prices=prices, curtail=curtail, soc_max=soc_max)
+
+    planner.solve()
+    sol = planner.store_solution()
+
+    dis = Planner(scenarios=s_obs, prices=prices, x=sol['x'], curtail=curtail, soc_max=soc_max)
+    dis.solve()
+    sol_dis = dis.store_solution()
+
+    return [sol_dis['obj'] / 1000, sol_dis['dad_profit'] / 1000, sol_dis['short_penalty'] / 1000, sol_dis['long_penalty'] / 1000, sol_dis['x']]
+
 def energy_score(s: np.array, y_true: np.array):
     """
     Compute the Energy score (ES).
